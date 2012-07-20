@@ -13,6 +13,8 @@
 namespace APY\DataGridBundle\Grid\Source;
 
 use APY\DataGridBundle\Grid\Column;
+use APY\DataGridBundle\Grid\Rows;
+use APY\DataGridBundle\Grid\Row;
 
 /**
  * Vector is really an Array
@@ -186,6 +188,180 @@ class Vector extends Source
     public function execute($columns, $page = 0, $limit = 0, $maxResults = null)
     {
         return $this->executeFromData($columns, $page, $limit, $maxResults);
+    }
+    
+     public function executeFromData($columns, $page = 0, $limit = 0, $maxResults = null) {
+        $returnItems = array();
+        $serializeColumns = array();
+        
+        //filter
+        foreach($this->data as $key => $data) {
+            $returnItems[$key] = $data;
+            
+            foreach($columns as $column) {
+                $fieldValue = $data[$column->getField()];
+                
+                if ($column->isFiltered()) {
+                    $filters = $column->getFilters('vector');
+                    
+                    foreach($filters as $filter) {
+                        $operator = $filter->getOperator();
+                        $value = $filter->getValue();
+
+                        // Normalize value
+                        switch ($operator) {
+                            case Column\Column::OPERATOR_EQ:
+                                $value = "/^$value$/i";
+                                break;
+                            case Column\Column::OPERATOR_NEQ:
+                                $value = "/^(?!$value$).*$/i";
+                                break;
+                            case Column\Column::OPERATOR_LIKE:
+                                $value = "/$value/i";;
+                                break;
+                            case Column\Column::OPERATOR_NLIKE:
+                                $value = "/^((?!$value).)*$/i";
+                                break;
+                            case Column\Column::OPERATOR_LLIKE:
+                                $value = "/$value$/i";
+                                break;
+                            case Column\Column::OPERATOR_RLIKE:
+                                $value = "/^$value/i";
+                                break;
+                        }
+
+                        // Test
+                        switch ($operator) {
+                            case Column\Column::OPERATOR_EQ:
+                            case Column\Column::OPERATOR_NEQ:
+                            case Column\Column::OPERATOR_LIKE:
+                            case Column\Column::OPERATOR_NLIKE:
+                            case Column\Column::OPERATOR_LLIKE:
+                            case Column\Column::OPERATOR_RLIKE:
+                                if ($column->getType() === 'array') {
+                                    $fieldValue = str_replace(':{i:0;', ':{', serialize($fieldValue));
+                                }
+
+                                $found = preg_match($value, $fieldValue);
+                                break;
+                            case Column\Column::OPERATOR_GT:
+                                $found = $fieldValue > $value;
+                                break;
+                            case Column\Column::OPERATOR_GTE:
+                                $found = $fieldValue >= $value;
+                                break;
+                            case Column\Column::OPERATOR_LT:
+                                $found = $fieldValue < $value;
+                                break;
+                            case Column\Column::OPERATOR_LTE:
+                                $found = $fieldValue <= $value;
+                                break;
+                            case Column\Column::OPERATOR_ISNULL:
+                                $found = $fieldValue === null;
+                                break;
+                            case Column\Column::OPERATOR_ISNOTNULL:
+                                $found = $fieldValue !== null;
+                                break;
+                        }
+                        
+                        if (!$found) {
+                            unset($returnItems[$key]);
+                        }
+                    }
+                    if ($column->getType() === 'array') {
+                        $serializeColumns[] = $column->getId();
+                    }
+                }
+            }
+        }
+        
+        //order
+        foreach ($columns as $column) {
+            if ($column->isSorted()) {
+                $sortTypes = array();
+                $sortedItems = array();
+                foreach ($returnItems as $key => $item) {
+                    $value = $item[$column->getField()];
+
+                    // Format values for sorting and define the type of sort
+                    switch ($column->getType()) {
+                        case 'text':
+                            $sortedItems[$key] = strtolower($value);
+                            $sortType = SORT_STRING;
+                            break;
+                        case 'datetime':
+                        case 'date':
+                        case 'time':
+                            if ($value instanceof \DateTime) {
+                                $sortedItems[$key] = $value->getTimestamp();
+                            } else {
+                                $sortedItems[$key] = strtotime($value);
+                            }
+                            $sortType = SORT_NUMERIC;
+                            break;
+                        case 'boolean':
+                            $sortedItems[$key] = $value ? 1 : 0;
+                            $sortType = SORT_NUMERIC;
+                            break;
+                        case 'array':
+                            $sortedItems[$key] = json_encode($value);
+                            $sortType = SORT_STRING;
+                            break;
+                        case 'number':
+                            $sortedItems[$key] = $value;
+                            $sortType = SORT_NUMERIC;
+                            break;
+                        default:
+                            $sortedItems[$key] = $value;
+                            $sortType = SORT_REGULAR;
+                    }
+                }
+
+                array_multisort($sortedItems, ($column->getOrder() == 'asc') ? SORT_ASC : SORT_DESC, $sortType, $returnItems);
+                break;
+            }
+        }
+        
+        $this->count = count($returnItems);
+
+        // Pagination
+        if ($limit > 0) {
+            $maxResults = ($maxResults !== null && ($maxResults - $page * $limit < $limit)) ? $maxResults - $page * $limit : $limit;
+
+            $returnItems = array_slice($returnItems, $page * $limit, $maxResults);
+        } elseif ($maxResults !== null) {
+            $returnItems = array_slice($returnItems, 0, $maxResults);
+        }
+
+        $rows = new Rows();
+        foreach ($returnItems as $item) {
+            $row = new Row();
+
+            if ($this instanceof Vector) {
+                $row->setPrimaryField($this->id);
+            }
+
+            foreach ($item as $fieldName => $fieldValue) {
+                if ($this instanceof Entity) {
+                    if (in_array($fieldName, $serializeColumns)) {
+                        if (is_string($fieldValue)) {
+                            $fieldValue = unserialize($fieldValue);
+                        }
+                    }
+                }
+
+                $row->setField($fieldName, $fieldValue);
+            }
+
+            //call overridden prepareRow or associated closure
+            if (($modifiedRow = $this->prepareRow($row)) != null) {
+                $rows->addRow($modifiedRow);
+            }
+        }
+
+        $this->items = $returnItems;
+
+        return $rows;
     }
 
     public function populateSelectFilters($columns, $loop = false)

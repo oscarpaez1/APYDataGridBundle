@@ -210,6 +210,13 @@ class Grid
     protected $defaultOrder;
 
     /**
+     * Default limit
+     *
+     * @var integer
+     */
+    protected $defaultLimit;
+
+    /**
      * Default page
      *
      * @var int
@@ -225,7 +232,6 @@ class Grid
     // Lazy parameters for the action column
     protected $actionsColumnSize;
     protected $actionsColumnSeparator;
-
 
     /**
      * @param \Symfony\Component\DependencyInjection\Container $container
@@ -244,13 +250,11 @@ class Grid
         $this->columns = new Columns($container->get('security.context'));
 
         $this->routeParameters = $this->request->attributes->all();
-        unset($this->routeParameters['_route']);
-        unset($this->routeParameters['_controller']);
-        unset($this->routeParameters['_route_params']);
-        unset($this->routeParameters['_template']);
-        unset($this->routeParameters['_template_default_vars']);
-        unset($this->routeParameters['_template_streamable']);
-        unset($this->routeParameters['_template_vars']);
+        foreach ($this->routeParameters as $key => $param) {
+            if (substr($key, 0, 1) == '_') {
+                unset($this->routeParameters[$key]);
+            }
+        }
     }
 
     /**
@@ -447,8 +451,22 @@ class Grid
             list($columnId, $columnOrder) = explode('|', $this->defaultOrder);
 
             $column = $this->columns->getColumnById($columnId);
-            if ($column->isSortable() && in_array(strtolower($columnOrder), array('asc', 'desc'))) {
+            if (in_array(strtolower($columnOrder), array('asc', 'desc'))) {
                 $this->set(self::REQUEST_QUERY_ORDER, $this->defaultOrder);
+            } else {
+                throw new \InvalidArgumentException($columnOrder . ' is not a valid order.');
+            }
+        }
+
+        if ($this->defaultLimit !== null) {
+            if ((int) $this->defaultLimit >= 0) {
+                if (isset($this->limits[$this->defaultLimit])) {
+                    $this->set(self::REQUEST_QUERY_LIMIT, $this->defaultLimit);
+                } else {
+                    throw new \InvalidArgumentException($this->defaultLimit. ' is not a valid limit.');
+                }
+            } else {
+                throw new \InvalidArgumentException('Limit must be a positive number');
             }
         }
     }
@@ -497,7 +515,7 @@ class Grid
     protected function prepare()
     {
         if ($this->source->isDataLoaded()) {
-            $this->rows = $this->source->executeFromData($this->columns->getIterator(true), $this->page, $this->limit, $this->maxResults);
+            $this->rows = $this->source->executeFromData($this->columns, $this->page, $this->limit, $this->maxResults);
         } else {
             $this->rows = $this->source->execute($this->columns->getIterator(true), $this->page, $this->limit, $this->maxResults);
         }
@@ -903,13 +921,27 @@ class Grid
     }
 
     /**
+     * Sets Route URL
+     *
+     * @param string routeUrl
+     *
+     * @return self
+     */
+    public function setRouteUrl($routeUrl)
+    {
+        $this->routeUrl = $routeUrl;
+
+        return $this;
+    }
+
+    /**
      * Returns Route URL
      *
      * @return string
      */
     public function getRouteUrl()
     {
-        if ($this->routeUrl == '') {
+        if ($this->routeUrl === null) {
             $this->routeUrl = $this->router->generate($this->request->get('_route'), $this->getRouteParameters());
         }
 
@@ -1025,14 +1057,11 @@ class Grid
         if (is_array($limits)) {
             if ( (int) key($limits) === 0) {
                 $this->limits = array_combine($limits, $limits);
-                $this->limit = current($this->limits);
             } else {
                 $this->limits = $limits;
-                $this->limit = (int) key($this->limits);
             }
         } elseif (is_int($limits)) {
             $this->limits = array($limits => (string)$limits);
-            $this->limit = $limits;
         } else {
             throw new \InvalidArgumentException('Limit has to be array or integer');
         }
@@ -1061,7 +1090,21 @@ class Grid
     }
 
     /**
-     * Sets current Page
+     * Sets default Limit
+     *
+     * @param $limit
+     *
+     * @return self
+     */
+    public function setDefaultLimit($limit)
+    {
+        $this->defaultLimit = (int) $limit;
+
+        return $this;
+    }
+
+    /**
+     * Sets default Page
      *
      * @param $page
      *
@@ -1441,7 +1484,7 @@ class Grid
      * Redirects or Renders a view - helper function
      *
      * @param string|array $param1 The view name or an array of parameters to pass to the view
-     * @param string|array $param1 The view name or an array of parameters to pass to the view
+     * @param string|array $param2 The view name or an array of parameters to pass to the view
      * @param Response $response A response instance
      *
      * @return Response A Response instance
