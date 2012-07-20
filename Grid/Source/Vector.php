@@ -199,6 +199,9 @@ class Vector extends Source
             $returnItems[$key] = $data;
             
             foreach($columns as $column) {
+                if (!isset($data[$column->getField()])) {
+                    continue;
+                }
                 $fieldValue = $data[$column->getField()];
                 
                 if ($column->isFiltered()) {
