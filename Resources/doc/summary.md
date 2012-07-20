@@ -65,6 +65,7 @@ SUMMARY
 	1. [Hide or show columns](grid_configuration/hide_show_columns.md)
 	1. [Set a default page](grid_configuration/set_default_page.md)
 	1. [Set a default order](grid_configuration/set_default_order.md)
+	1. [Set a default items per page](grid_configuration/set_default_limit.md)
 	1. [Set default filters](grid_configuration/set_default_filters.md)
 	1. [Set the no data message](grid_configuration/set_no_data_message.md)
 	1. [Set the no result message](grid_configuration/set_no_result_message.md)
@@ -75,6 +76,7 @@ SUMMARY
 	1. [Set data to avoid calling the database](grid_configuration/set_data.md)
 	1. [Grid Response helper](grid_configuration/grid_response.md)
 	1. [Multi Grid manager](grid_configuration/multi_grid_manager.md)
+	1. [Set the route of the grid](grid_configuration/set_grid_route.md)
 	1. [Working Example](grid_configuration/working_example.md)
 
 1. [Export](export/)

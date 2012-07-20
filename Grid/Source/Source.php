@@ -24,6 +24,7 @@ abstract class Source implements DriverInterface
     protected $prepareRowCallback = null;
     protected $data = null;
     protected $items = array();
+    protected $count;
 
     /**
      * @param \Doctrine\ODM\MongoDB\Query\Builder $queryBuilder
@@ -366,6 +367,8 @@ abstract class Source implements DriverInterface
             }
         }
 
+        $this->count = count($items);
+
         // Pagination
         if ($limit > 0) {
             $maxResults = ($maxResults !== null && ($maxResults - $page * $limit < $limit)) ? $maxResults - $page * $limit : $limit;
@@ -452,7 +455,6 @@ abstract class Source implements DriverInterface
                             if (is_string($value)) {
                                 $value = unserialize($value);
                             }
-
                             foreach ($value as $val) {
                                 $values[$val] = $val;
                             }
@@ -467,6 +469,9 @@ abstract class Source implements DriverInterface
                     $column->setSelectFrom('source');
                     $this->populateSelectFiltersFromData($columns, true);
                 } else {
+                    if ($column->getType() == 'array') {
+                        natcasesort($values);
+                    }
                     $column->setValues(array_unique($values));
                 }
             }
@@ -480,10 +485,6 @@ abstract class Source implements DriverInterface
      */
     public function getTotalCountFromData($maxResults = null)
     {
-        if ($maxResults !== null) {
-            return min(array($maxResults, count($this->items)));
-        }
-
-        return count($this->items);
+        return $maxResults === null ? $this->count : min($this->count, $maxResults);
     }
 }
