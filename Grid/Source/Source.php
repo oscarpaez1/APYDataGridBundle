@@ -257,27 +257,26 @@ abstract class Source implements DriverInterface
                     foreach ($filters as $filter) {
                         $operator = $filter->getOperator();
                         $value = $filter->getValue();
-
                         
                         // Normalize value
                         switch ($operator) {
                             case Column\Column::OPERATOR_EQ:
-                                $value = "/^$value$/i";
+                                $value = '/^{'.preg_quote($value, '/').'$/i';
                                 break;
                             case Column\Column::OPERATOR_NEQ:
-                                $value = "/^(?!$value$).*$/i";
+                                $value = '/^(?!'.preg_quote($value, '/').'$).*$/i';
                                 break;
                             case Column\Column::OPERATOR_LIKE:
-                                $value = "/$value/i";;
+                                $value = '/'.preg_quote($value, '/').'/i';
                                 break;
                             case Column\Column::OPERATOR_NLIKE:
-                                $value = "/^((?!$value).)*$/i";
+                                $value = '/^((?!'.preg_quote($value, '/').').)*$/i';
                                 break;
                             case Column\Column::OPERATOR_LLIKE:
-                                $value = "/$value$/i";
+                                $value = '/'.preg_quote($value, '/').'$/i';
                                 break;
                             case Column\Column::OPERATOR_RLIKE:
-                                $value = "/^$value/i";
+                                $value = '/^'.preg_quote($value, '/').'/i';
                                 break;
                         }
 
@@ -344,7 +343,7 @@ abstract class Source implements DriverInterface
         // Order
         foreach ($columns as $column) {
             if ($column->isSorted()) {
-                $sortTypes = array();
+                $sortType = SORT_REGULAR;
                 $sortedItems = array();
                 foreach ($items as $key => $item) {
                     $value = $item[$column->getField()];
@@ -383,7 +382,10 @@ abstract class Source implements DriverInterface
                     }
                 }
 
-                array_multisort($sortedItems, ($column->getOrder() == 'asc') ? SORT_ASC : SORT_DESC, $sortType, $items);
+                if (!empty($sortedItems)) {
+                    array_multisort($sortedItems, ($column->getOrder() == 'asc') ? SORT_ASC : SORT_DESC, $sortType, $items);
+                }
+            
                 break;
             }
         }
@@ -476,6 +478,7 @@ abstract class Source implements DriverInterface
                             if (is_string($value)) {
                                 $value = unserialize($value);
                             }
+
                             foreach ($value as $val) {
                                 $values[$val] = $val;
                             }
