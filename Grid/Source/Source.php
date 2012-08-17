@@ -74,11 +74,12 @@ abstract class Source implements DriverInterface
      *
      * @abstract
      * @param \APY\DataGridBundle\Grid\Column\Column[] $columns
-     * @param int $page
-     * @param int $limit
-     * @return \APY\DataGridBundle\DataGrid\Rows
+     * @param int $page Page Number
+     * @param int $limit Rows Per Page
+     * @param int $gridDataJunction Grid data junction
+     * @return \APY\DataGridBundle\Grid\Rows
      */
-    abstract public function execute($columns, $page = 0, $limit = 0, $maxResults = null);
+    abstract public function execute($columns, $page = 0, $limit = 0, $maxResults = null, $gridDataJunction = Column::DATA_CONJUNCTION);
 
     /**
      * Get Total count of data items
@@ -144,7 +145,7 @@ abstract class Source implements DriverInterface
     public function setData($data)
     {
         $this->data = $data;
-        
+
         return $this;
     }
 
@@ -176,7 +177,7 @@ abstract class Source implements DriverInterface
     protected function getItemsFromData($columns)
     {
         $items = array();
-        
+
         foreach ($this->data as $key => $item) {
             foreach ($columns as $column) {
                 $fieldName = $column->getField();
@@ -215,11 +216,11 @@ abstract class Source implements DriverInterface
                 $items[$key][$fieldName] = $fieldValue;
             }
         }
-        
+
         return $items;
-        
+
     }
-    
+
     /**
      * Find data from array|object
      *
@@ -244,7 +245,7 @@ abstract class Source implements DriverInterface
                 if ($column->isFiltered()) {
                     // Some attributes of the column can be changed in this function
                     $filters = $column->getFilters('vector');
-                    
+
                     if ($column->getDataJunction() === Column\Column::DATA_DISJUNCTION) {
                         $disjunction = true;
                         $keep = false;
@@ -257,7 +258,7 @@ abstract class Source implements DriverInterface
                     foreach ($filters as $filter) {
                         $operator = $filter->getOperator();
                         $value = $filter->getValue();
-                        
+
                         // Normalize value
                         switch ($operator) {
                             case Column\Column::OPERATOR_EQ:
@@ -335,9 +336,9 @@ abstract class Source implements DriverInterface
 
             if (!$keep) {
                 unset($items[$key]);
-                
+
             }
-            
+
         }
 
         // Order
@@ -385,7 +386,7 @@ abstract class Source implements DriverInterface
                 if (!empty($sortedItems)) {
                     array_multisort($sortedItems, ($column->getOrder() == 'asc') ? SORT_ASC : SORT_DESC, $sortType, $items);
                 }
-            
+
                 break;
             }
         }
@@ -431,13 +432,13 @@ abstract class Source implements DriverInterface
 
         return $rows;
     }
-        
+
     public function populateSelectFiltersFromData($columns, $loop = false)
     {
         /* @var $column Column */
         foreach ($columns as $column) {
             $selectFrom = $column->getSelectFrom();
-            
+
             if ($column->getFilterType() === 'select' && ($selectFrom === 'source' || $selectFrom === 'query')) {
 
                 // For negative operators, show all values
@@ -452,13 +453,15 @@ abstract class Source implements DriverInterface
 
                 // Dynamic from query or not ?
                 $item = ($selectFrom === 'source') ? $this->data : $this->items;
-                
+
                 $values = array();
                 foreach($item as $row) {
                     $value = $row[$column->getField()];
 
                     switch ($column->getType()) {
                         case 'number':
+                            $values[$value] = $column->getDisplayedValue($value);
+                            break;
                         case 'datetime':
                         case 'date':
                         case 'time':
@@ -472,7 +475,8 @@ abstract class Source implements DriverInterface
                                 $value = $value['i'];
                             }
 
-                            $values[$value] = $column->getDisplayedValue($value);
+                            $displayedValue = $column->getDisplayedValue($value);
+                            $values[$displayedValue] = $displayedValue;
                             break;
                         case 'array':
                             if (is_string($value)) {

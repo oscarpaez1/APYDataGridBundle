@@ -22,7 +22,7 @@ $grid->setPersistence($persistence);
 |:--:|:--|:--|:--|:--|
 |persistence|boolean|false|Persistence of the grid|
 
-## Exemple
+## Example
 
 ```php
 <?php
@@ -33,7 +33,7 @@ $grid->setPersistence(true);
 ...
 ```
 
-## Set default persistence in your config.yml
+## Set the default persistence in your config.yml
 ```yml
 apy_data_grid:
     persistence: true

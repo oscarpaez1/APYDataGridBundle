@@ -14,6 +14,7 @@
 namespace APY\DataGridBundle\Grid;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 
 use APY\DataGridBundle\Grid\Columns;
 use APY\DataGridBundle\Grid\Rows;
@@ -23,6 +24,7 @@ use APY\DataGridBundle\Grid\Column\Column;
 use APY\DataGridBundle\Grid\Column\MassActionColumn;
 use APY\DataGridBundle\Grid\Column\ActionsColumn;
 use APY\DataGridBundle\Grid\Source\Source;
+use APY\DataGridBundle\Grid\Export\ExportInterface;
 
 class Grid
 {
@@ -54,6 +56,11 @@ class Grid
      * @var \Symfony\Component\HttpFoundation\Request
      */
     protected $request;
+
+    /**
+     * @var Symfony\Component\Security\Core\SecurityContext
+     */
+    protected $securityContext;
 
     /**
      * @var string
@@ -196,6 +203,13 @@ class Grid
     protected $items = array();
 
     /**
+     * Data junction of the grid
+     *
+     * @var int
+     */
+    protected $dataJunction = Column::DATA_CONJUNCTION;
+
+    /**
      * Default filters
      *
      * @var array
@@ -244,10 +258,11 @@ class Grid
         $this->router = $container->get('router');
         $this->request = $container->get('request');
         $this->session = $this->request->getSession();
+        $this->securityContext = $container->get('security.context');
 
         $this->id = $id;
 
-        $this->columns = new Columns($container->get('security.context'));
+        $this->columns = new Columns($this->securityContext);
 
         $this->routeParameters = $this->request->attributes->all();
         foreach ($this->routeParameters as $key => $param) {
@@ -336,7 +351,7 @@ class Grid
         $referer = strtok($this->request->headers->get('referer'), '?');
 
         // Persistence or reset - kill previous session
-        if ((!$this->request->isXmlHttpRequest() && !$this->persistence && $referer != $this->request->getUriForPath($this->request->getPathInfo()))
+        if ((!$this->request->isXmlHttpRequest() && !$this->persistence && $referer != $this->getCurrentUri())
          || isset($this->requestData[self::REQUEST_QUERY_RESET])) {
             $this->session->remove($this->hash);
         }
@@ -344,6 +359,11 @@ class Grid
         if ($this->session->get($this->hash) === null) {
             $this->newSession = true;
         }
+    }
+
+    protected function getCurrentUri()
+    {
+        return $this->request->getScheme().'://'.$this->request->getHttpHost().$this->request->getBaseUrl().$this->request->getPathInfo();
     }
 
     protected function processLazyParameters()
@@ -517,7 +537,7 @@ class Grid
         if ($this->source->isDataLoaded()) {
             $this->rows = $this->source->executeFromData($this->columns, $this->page, $this->limit, $this->maxResults);
         } else {
-            $this->rows = $this->source->execute($this->columns->getIterator(true), $this->page, $this->limit, $this->maxResults);
+            $this->rows = $this->source->execute($this->columns->getIterator(true), $this->page, $this->limit, $this->maxResults, $this->dataJunction);
         }
 
         if(!$this->rows instanceof Rows) {
@@ -534,8 +554,8 @@ class Grid
         //add row actions column
         if (count($this->rowActions) > 0) {
             foreach ($this->rowActions as $column => $rowActions) {
-                if ($rowAction = $this->columns->hasColumnById($column, true)) {
-                    $rowAction->setRowActions($rowActions);
+                if ($actionColumn = $this->columns->hasColumnById($column, true)) {
+                    $actionColumn->setRowActions($rowActions);
                 } else {
                     $actionColumn = new ActionsColumn($column, 'Actions', $rowActions);
                     if ($this->actionsColumnSize>-1) {
@@ -643,7 +663,9 @@ class Grid
                 $this->prepare();
 
                 $export = $this->exports[$exportId];
-                $export->setContainer($this->container);
+                if ($export instanceof ContainerAwareInterface) {
+                    $export->setContainer($this->container);
+                }
                 $export->computeData($this);
 
                 $this->exportResponse = $export->getResponse();
@@ -786,7 +808,9 @@ class Grid
      */
     public function addMassAction(MassActionInterface $action)
     {
-        $this->massActions[] = $action;
+        if ($action->getRole() === null || $this->securityContext->isGranted($action->getRole())) {
+            $this->massActions[] = $action;
+        }
 
         return $this;
     }
@@ -810,7 +834,9 @@ class Grid
      */
     public function addRowAction(RowActionInterface $action)
     {
-        $this->rowActions[$action->getColumn()][] = $action;
+        if ($action->getRole() === null || $this->securityContext->isGranted($action->getRole())) {
+            $this->rowActions[$action->getColumn()][] = $action;
+        }
 
         return $this;
     }
@@ -866,13 +892,15 @@ class Grid
     /**
      * Adds Export
      *
-     * @param Export $export
+     * @param ExportInterface $export
      *
      * @return self
      */
-    public function addExport($export)
+    public function addExport(ExportInterface $export)
     {
-        $this->exports[] = $export;
+        if ($export->getRole() === null || $this->securityContext->isGranted($export->getRole())) {
+            $this->exports[] = $export;
+        }
 
         return $this;
     }
@@ -1043,6 +1071,18 @@ class Grid
     public function getPersistence()
     {
         return $this->persistence;
+    }
+
+    public function getDataJunction()
+    {
+        return $this->dataJunction;
+    }
+
+    public function setDataJunction($dataJunction)
+    {
+        $this->dataJunction = $dataJunction;
+
+        return $this;
     }
 
     /**

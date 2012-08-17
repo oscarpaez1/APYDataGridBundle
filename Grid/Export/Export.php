@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
-abstract class Export implements ContainerAwareInterface
+abstract class Export implements ExportInterface, ContainerAwareInterface
 {
     const DEFAULT_TEMPLATE = 'APYDataGridBundle::blocks.html.twig';
 
@@ -46,12 +46,15 @@ abstract class Export implements ContainerAwareInterface
 
     protected $charset;
 
-    public function __construct($title, $fileName = 'export', $params = array(), $charset = 'UTF-8')
+    protected $role;
+
+    public function __construct($title, $fileName = 'export', $params = array(), $charset = 'UTF-8', $role = null)
     {
         $this->title = $title;
         $this->fileName = $fileName;
         $this->params = $params;
         $this->charset = $charset;
+        $this->role = $role;
     }
 
     /**
@@ -93,7 +96,7 @@ abstract class Export implements ContainerAwareInterface
         // Response
         if (function_exists('mb_strlen')) {
             $this->content = mb_convert_encoding($this->content, $this->charset, $this->container->getParameter('kernel.charset'));
-            $filesize = mb_strlen($this->content, $this->container->getParameter('kernel.charset'));
+            $filesize = mb_strlen($this->content, $this->charset);
         } else {
             $filesize = strlen($this->content);
             $this->charset = $this->container->getParameter('kernel.charset');
@@ -246,7 +249,7 @@ abstract class Export implements ContainerAwareInterface
     protected function getGridTitles()
     {
         $titlesHTML = $this->renderBlock('grid_titles', array('grid' => $this->grid));
-        
+
         preg_match_all('#<th[^>]*?>(.*)?</th>#isU', $titlesHTML, $matches);
 
         if (empty($matches)) {
@@ -325,7 +328,7 @@ abstract class Export implements ContainerAwareInterface
          || $this->hasBlock($block = 'grid_column_'.$column->getRenderBlockId().'_cell')
          || $this->hasBlock($block = 'grid_column_'.$column->getType().'_cell'))
         {
-            return $this->renderBlock($block, array('column' => $column, 'value' => $value, 'row' => $row));
+            return $this->renderBlock($block, array('grid' => $this->grid, 'column' => $column, 'value' => $value, 'row' => $row));
         }
 
         return $value;
@@ -418,7 +421,7 @@ abstract class Export implements ContainerAwareInterface
 
         // Convert Special Characters in HTML
         $value = html_entity_decode($value);
-        
+
         $value = trim($value);
 
         return $value;
@@ -640,5 +643,29 @@ abstract class Export implements ContainerAwareInterface
     public function getTemplate()
     {
         return $this->template ?:$this::DEFAULT_TEMPLATE;
+    }
+
+    /**
+     * set role
+     *
+     * @param mixed $role
+     *
+     * @return self
+     */
+    public function setRole($role)
+    {
+        $this->role = $role;
+
+        return $this;
+    }
+
+    /**
+     * Get role
+     *
+     * @return mixed
+     */
+    public function getRole()
+    {
+        return $this->role;
     }
 }

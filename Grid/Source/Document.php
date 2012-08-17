@@ -136,11 +136,12 @@ class Document extends Source
 
     /**
      * @param \APY\DataGridBundle\Grid\Column\Column[] $columns
-     * @param int $page  Page Number
-     * @param int $limit  Rows Per Page
+     * @param int $page Page Number
+     * @param int $limit Rows Per Page
+     * @param int $gridDataJunction  Grid data junction
      * @return \APY\DataGridBundle\Grid\Rows
      */
-    public function execute($columns, $page = 0, $limit = 0, $maxResults = null)
+    public function execute($columns, $page = 0, $limit = 0, $maxResults = null, $gridDataJunction = Column::DATA_CONJUNCTION)
     {
         $this->query = $this->manager->createQueryBuilder($this->documentName);
 
@@ -332,6 +333,8 @@ class Document extends Source
 
                     switch ($column->getType()) {
                         case 'number':
+                            $values[$value] = $column->getDisplayedValue($value);
+                            break;
                         case 'datetime':
                         case 'date':
                         case 'time':
@@ -344,7 +347,8 @@ class Document extends Source
                                 $value = $value['i'];
                             }
 
-                            $values[$value] = $column->getDisplayedValue($value);
+                            $displayedValue = $column->getDisplayedValue($value);
+                            $values[$displayedValue] = $displayedValue;
                             break;
                         default:
                             $values[$value] = $value;
