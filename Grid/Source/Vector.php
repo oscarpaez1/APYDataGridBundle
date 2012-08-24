@@ -443,4 +443,13 @@ class Vector extends Source
             }
         }
     }
+
+    /**
+     * Get prepared data from source
+     * @return array
+     */
+    public function getItems()
+    {
+        return $this->items;
+    }
 }
