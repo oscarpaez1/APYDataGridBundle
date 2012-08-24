@@ -297,6 +297,15 @@ class Grid
         return $this;
     }
 
+    /**
+     * Get Source from Grid
+     * @return Source
+     */
+    public function getSource()
+    {
+        return $this->source;
+    }
+
     public function isReadyForRedirect()
     {
         if($this->source === null) {

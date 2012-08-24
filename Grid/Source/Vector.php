@@ -284,6 +284,7 @@ class Vector extends Source
             if ($column->isSorted()) {
                 $sortTypes = array();
                 $sortedItems = array();
+                $sortType = SORT_REGULAR;
                 foreach ($returnItems as $key => $item) {
                     $value = $item[$column->getField()];
 
