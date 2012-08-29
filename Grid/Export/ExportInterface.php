@@ -19,7 +19,7 @@ interface ExportInterface
      *
      * @param Grid $grid The grid
      */
-    public function computeData($grid);
+//    public function computeData($grid);
 
     /**
      * Get the export Response
