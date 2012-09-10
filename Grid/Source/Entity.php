@@ -115,37 +115,41 @@ class Entity extends Source
     {
         $name = $column->getField();
 
-        if (strpos($name, '.') === false) {
-            return self::TABLE_ALIAS.'.'.$name;
-        }
+        if (strpos($name, '.') !== false ) {
+            $parent = self::TABLE_ALIAS;
+            $previousParent = '';
 
-        $parent = $previousParent = self::TABLE_ALIAS;
-
-        $elements = explode('.', $name);
-
-        while ($element = array_shift($elements)) {
-            if (count($elements) > 0) {
-                $this->joins['_' . $element] = $parent . '.' . $element;
-                $previousParent = $parent;
-                $parent = '_' . $element;
-                $name = $element;
-            } else {
-                $name .= '.'.$element;
+            $elements = explode('.', $name);
+            while ($element = array_shift($elements)) {
+                if (count($elements) > 0) {
+                    $previousParent .= '_' . $element;
+                    $this->joins[$previousParent] = $parent . '.' . $element;
+                    $parent = '_' . $element;
+                } else {
+                    $name = $previousParent . '.' . $element;
+                }
             }
+
+            $alias = str_replace('.', '::', $column->getId());
+        } elseif (strpos($name, ':') !== false) {
+            $previousParent = self::TABLE_ALIAS;
+            $alias = $name;
+        } else {
+            return self::TABLE_ALIAS.'.'.$name;
         }
 
         // Aggregate dql functions
         $matches = array();
         if ($column->hasDQLFunction($matches)) {
             if (strtolower($matches['parameters']) == 'distinct') {
-                $functionWithParameters = $matches['function'].'(DISTINCT '.$parent.'.'.$matches['field'].')';
+                $functionWithParameters = $matches['function'].'(DISTINCT '.$previousParent.'.'.$matches['field'].')';
             } else {
                 $parameters = '';
                 if ($matches['parameters'] !== '') {
                     $parameters = ', ' . (is_numeric($matches['parameters']) ? $matches['parameters'] : "'".$matches['parameters']."'");
                 }
 
-                $functionWithParameters = $matches['function'].'('.$parent.'.'.$matches['field'].$parameters.')';
+                $functionWithParameters = $matches['function'].'('.$previousParent.'.'.$matches['field'].$parameters.')';
             }
 
             if ($withAlias) {
@@ -153,21 +157,21 @@ class Entity extends Source
                 $this->query->addGroupBy($previousParent);
                 $this->querySelectfromSource->addGroupBy($previousParent);
 
-                return $functionWithParameters.' as '.substr($parent, 1).'::'.$matches['all'];
+                return "$functionWithParameters as $alias";
             }
 
             if ($forHavingClause) {
                 return $functionWithParameters;
             }
 
-            return substr($parent, 1).'::'.$matches['all'];
+            return $alias;
         }
 
         if ($withAlias) {
-            return '_' . $name.' as '.str_replace('.', '::', $column->getId());
+            return "$name as $alias";
         }
 
-        return '_'.$name;
+        return $name;
     }
 
     /**
@@ -176,11 +180,26 @@ class Entity extends Source
      */
     protected function getGroupByFieldName($fieldName)
     {
-        if (strpos($fieldName, '.') === false) {
+        if (strpos($fieldName, '.') !== false) {
+            $previousParent = '';
+
+            $elements = explode('.', $fieldName);
+            while ($element = array_shift($elements)) {
+                if (count($elements) > 0) {
+                    $previousParent .= '_' . $element;
+                } else {
+                    $name = $previousParent . '.' . $element;
+                }
+            }
+        } else {
+            if (($pos = strpos($fieldName, ':')) !== false) {
+                $fieldName = substr($fieldName, 0, $pos);
+            }
+            
             return self::TABLE_ALIAS.'.'.$fieldName;
         }
 
-        return '_'.$fieldName;
+        return $name;
     }
 
     /**

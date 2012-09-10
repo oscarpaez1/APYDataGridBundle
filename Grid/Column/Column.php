@@ -83,6 +83,7 @@ abstract class Column
     protected $values = array();
     protected $selectFrom;
     protected $selectMulti;
+    protected $selectExpanded;
     protected $searchOnClick = false;
 
     protected $dataJunction = self::DATA_CONJUNCTION;
@@ -137,6 +138,7 @@ abstract class Column
         )));
         $this->setDefaultOperator($this->getParam('defaultOperator', self::OPERATOR_LIKE));
         $this->setSelectMulti($this->getParam('selectMulti', false));
+        $this->setSelectExpanded($this->getParam('selectExpanded', false));
         $this->setSearchOnClick($this->getParam('searchOnClick'), false);
     }
 
@@ -596,11 +598,13 @@ abstract class Column
                     case self::OPERATOR_ISNOTNULL:
                         $filters[] = new Filter($this->data['operator']);
                         break;
-                    case self::OPERATOR_EQ:
                     case self::OPERATOR_LIKE:
                     case self::OPERATOR_RLIKE:
                     case self::OPERATOR_LLIKE:
-                        $this->setDataJunction(self::DATA_DISJUNCTION);
+                        if ($this->getSelectMulti()) {
+                            $this->setDataJunction(self::DATA_DISJUNCTION);
+                        }
+                    case self::OPERATOR_EQ:
                     case self::OPERATOR_NEQ:
                     case self::OPERATOR_NLIKE:
                         foreach ((array) $this->data['from'] as $value) {
@@ -735,9 +739,19 @@ abstract class Column
         $this->selectMulti = $selectMulti;
     }
 
+    public function getSelectExpanded()
+    {
+        return $this->selectExpanded;
+    }
+
+    public function setSelectExpanded($selectExpanded)
+    {
+        $this->selectExpanded = $selectExpanded;
+    }
+
     public function hasDQLFunction(&$matches = null)
     {
-        $regex = '/.(?P<all>(?P<field>\w+):(?P<function>\w+)(:)?(?P<parameters>\w*))$/';
+        $regex = '/(?P<all>(?P<field>\w+):(?P<function>\w+)(:)?(?P<parameters>\w*))$/';
 
         return ($matches === null) ? preg_match($regex, $this->field) : preg_match($regex, $this->field, $matches);
     }
@@ -772,8 +786,7 @@ abstract class Column
      */
     public function isFilterSubmitOnChange()
     {
-        if ($this->getSelectMulti()) return false;
-        return true;
+        return !$this->getSelectMulti();
     }
 
     public function setSearchOnClick($searchOnClick)

@@ -1,3 +1,12 @@
+`7 September 2012`
+ * Fix #241 - Numeric and boolean filter don't work with Vector source and setData function
+ * Fix #224 - Fix wrong default junction with multi select feature
+ * Fix #239 - Fix complexes alias names conflict
+ * Add #242 feature - Checkbox and radio filter with select filter and selectExpanded=true
+ * Fix bug - Fix one of the problems of #181
+ * Add #244 helper - Grid data to array
+ * Add DQL function support with non mapped fields 
+
 `4 September 2012`
  * Fix #237 - Add distinct support for DQL aggregate function
  * Add abbrevation support with __abbr in translation file
@@ -22,7 +31,6 @@
  * Fix datetime select filter
 
 `8 August 2012`
-
  * Add the default size and separator default config
 
 `31 July 2012`
