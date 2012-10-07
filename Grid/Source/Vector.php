@@ -62,7 +62,7 @@ class Vector extends Source
 
     protected function guessColumns()
     {
-        $columns = array();
+        $guessedColumns = array();
         $dataColumnIds = array_keys(reset($this->data));
 
         foreach ($dataColumnIds as $id) {
@@ -76,13 +76,11 @@ class Vector extends Source
                     'visible' => true,
                     'field' => $id,
                 );
-                $columns[] = new Column\UntypedColumn($params);
-            } else {
-                $columns[] = $this->getColumn($id);
+                $guessedColumns[] = new Column\UntypedColumn($params);
             }
         }
 
-        $this->setColumns($columns);
+        $this->setColumns(array_merge($this->columns, $guessedColumns));
 
         // Guess on the first 10 rows only
         $iteration = min(10, count($this->data));
