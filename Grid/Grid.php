@@ -299,7 +299,6 @@ class Grid
     }
 
     /**
-<<<<<<< HEAD
      * Get Source from Grid
      * @return Source
      */
@@ -308,10 +307,9 @@ class Grid
         return $this->source;
     }
 
-=======
+    /**
      * Handle the grid redirection, export, etc..
      */
->>>>>>> upstream/master
     public function isReadyForRedirect()
     {
         if($this->source === null) {
