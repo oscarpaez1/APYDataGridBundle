@@ -299,6 +299,7 @@ class Grid
     }
 
     /**
+<<<<<<< HEAD
      * Get Source from Grid
      * @return Source
      */
@@ -307,6 +308,10 @@ class Grid
         return $this->source;
     }
 
+=======
+     * Handle the grid redirection, export, etc..
+     */
+>>>>>>> upstream/master
     public function isReadyForRedirect()
     {
         if($this->source === null) {
@@ -805,6 +810,22 @@ class Grid
     public function setColumns(Columns $columns)
     {
         $this->columns = $columns;
+
+        return $this;
+    }
+
+    /**
+     * Sets order of Columns passing an array of column ids
+     * If the list of ids is uncomplete, the remaining columns will be
+     * placed after
+     *
+     * @param array $columnIds
+     *
+     * @return self
+     */
+    public function setColumnsOrder(array $columnIds)
+    {
+        $this->columns->setColumnsOrder($columnIds);
 
         return $this;
     }
@@ -1557,9 +1578,9 @@ class Grid
                 $parameters = (array) $param2;
                 $view = $param1;
             }
-
+         
             $parameters = array_merge(array('grid' => $this), $parameters);
-
+            
             if ($view === null) {
                 return $parameters;
             } else {
