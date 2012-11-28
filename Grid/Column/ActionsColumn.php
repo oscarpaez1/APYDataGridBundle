@@ -40,7 +40,10 @@ class ActionsColumn extends Column
 
             foreach ($actionParameters as $name => $parameter) {
                 if(is_int($name)) {
-                    $routeParameters[$this->getValidRouteParameters($parameter)] = $row->getField($parameter);
+                    if(($name = $action->getRouteParametersMapping($parameter)) === null) {
+                        $name = $this->getValidRouteParameters($parameter);
+                    }
+                    $routeParameters[$name] = $row->getField($parameter);
                 } else {
                     $routeParameters[$this->getValidRouteParameters($name)] = $parameter;
                 }
@@ -98,6 +101,26 @@ class ActionsColumn extends Column
     public function getFilterType()
     {
         return $this->getType();
+    }
+
+    /**
+     * Get the list of actions to render
+     *
+     * @param $row
+     * @return array
+     */
+    public function getActionsToRender($row)
+    {
+        $list = $this->rowActions;
+        foreach($list as $i=>$a) {
+        	$action = clone $a;
+            $list[$i] = $action->render($row);
+            if(null === $list[$i]) {
+                unset($list[$i]);
+            }
+        }
+
+        return $list;
     }
 
     public function getType()

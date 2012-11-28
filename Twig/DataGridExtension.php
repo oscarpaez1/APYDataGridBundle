@@ -103,6 +103,7 @@ class DataGridExtension extends \Twig_Extension
     {
         return array(
             'grid'              => new \Twig_Function_Method($this, 'getGrid', array('is_safe' => array('html'))),
+            'grid_html'         => new \Twig_Function_Method($this, 'getGridHtml', array('is_safe' => array('html'))),
             'grid_url'          => new \Twig_Function_Method($this, 'getGridUrl', array('is_safe' => array('html'))),
             'grid_filter'       => new \Twig_Function_Method($this, 'getGridFilter', array('is_safe' => array('html'))),
             'grid_cell'         => new \Twig_Function_Method($this, 'getGridCell', array('is_safe' => array('html'))),
@@ -129,16 +130,31 @@ class DataGridExtension extends \Twig_Extension
      * @param \APY\DataGridBundle\Grid\Grid $grid
      * @param string $theme
      * @param string $id
+     *
      * @return string
      */
-    public function getGrid($grid, $theme = null, $id = '', array $params = array())
+    public function getGrid($grid, $theme = null, $id = '', array $params = array(), $withjs = true)
     {
         $this->initGrid($grid, $theme, $id, $params);
 
         // For export
         $grid->setTemplate($theme);
 
-        return $this->renderBlock('grid', array('grid' => $grid));
+        return $this->renderBlock('grid', array('grid' => $grid, 'withjs' => $withjs));
+    }
+
+    /**
+     * Render grid block (html only)
+     *
+     * @param \APY\DataGridBundle\Grid\Grid $grid
+     * @param string $theme
+     * @param string $id
+     *
+     * @return string
+     */
+    public function getGridHtml($grid, $theme = null, $id = '', array $params = array())
+    {
+        return $this->getGrid($grid, $theme, $id, $params, false);
     }
 
     public function getGrid_($name, $grid)
@@ -269,7 +285,7 @@ class DataGridExtension extends \Twig_Extension
     {
         foreach ($this->getTemplates() as $template) {
             if ($template->hasBlock($name)) {
-                return $template->renderBlock($name, array_merge($parameters, $this->params));
+                return $template->renderBlock($name, array_merge($this->environment->getGlobals(), $parameters, $this->params));
             }
         }
 

@@ -343,7 +343,9 @@ class Grid
             }
 
             $this->redirect = true;
-        } else {
+        }
+
+        if ($this->redirect === null || ($this->request->isXmlHttpRequest() && !$this->isReadyForExport)) {
             if ($this->newSession) {
                 $this->setDefaultSessionData();
 
@@ -643,6 +645,14 @@ class Grid
                 $action = $this->massActions[$actionId];
                 $actionAllKeys = (boolean)$this->getFromRequest(self::REQUEST_QUERY_MASS_ACTION_ALL_KEYS_SELECTED);
                 $actionKeys = $actionAllKeys == false ? (array) $this->getFromRequest(MassActionColumn::ID) : array();
+
+                if($actionAllKeys)
+                {
+                    $this->processSessionData();
+                    $this->page = 0;
+                    $this->limit = 0;
+                    $this->prepare();
+                }
 
                 if (is_callable($action->getCallback())) {
                     call_user_func($action->getCallback(), array_keys($actionKeys), $actionAllKeys, $this->session, $action->getParameters());
@@ -1564,11 +1574,13 @@ class Grid
      */
     public function getGridResponse($param1 = null, $param2 = null, Response $response = null)
     {
-        if ($this->isReadyForRedirect()) {
-            if ($this->isReadyForExport()) {
-                return $this->getExportResponse();
-            }
+        $isReadyForRedirect = $this->isReadyForRedirect();
 
+        if ($this->isReadyForExport()) {
+            return $this->getExportResponse();
+        }
+
+        if ($isReadyForRedirect) {
             return new RedirectResponse($this->getRouteUrl());
         } else {
             if (is_array($param1) || $param1 === null) {
@@ -1578,9 +1590,9 @@ class Grid
                 $parameters = (array) $param2;
                 $view = $param1;
             }
-         
+
             $parameters = array_merge(array('grid' => $this), $parameters);
-            
+
             if ($view === null) {
                 return $parameters;
             } else {

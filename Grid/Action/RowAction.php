@@ -21,8 +21,10 @@ class RowAction implements RowActionInterface
     protected $target;
     protected $column = '__actions';
     protected $routeParameters = array();
+    protected $routeParametersMapping = array();
     protected $attributes = array();
     protected $role;
+    protected $callback;
 
     /**
      * Default RowAction constructor
@@ -238,6 +240,31 @@ class RowAction implements RowActionInterface
     }
 
     /**
+     * Set route parameters mapping
+     *
+     * @param array|string $routeParametersMapping
+     *
+     * @return self
+     */
+    public function setRouteParametersMapping($routeParametersMapping)
+    {
+        $this->routeParametersMapping = (array) $routeParametersMapping;
+
+        return $this;
+    }
+
+    /**
+     * Map the parameter
+     *
+     * @param string $name parameter
+     * @return null|string
+     */
+    public function getRouteParametersMapping($name)
+    {
+        return (isset($this->routeParametersMapping[$name]) ? $this->routeParametersMapping[$name] : null);
+    }
+
+    /**
      * Set attributes
      *
      * @param array $attributes
@@ -297,5 +324,33 @@ class RowAction implements RowActionInterface
     public function getRole()
     {
         return $this->role;
+    }
+
+    /**
+     * Set render callback
+     *
+     * @param  $callback
+     * @return self
+     */
+    public function manipulateRender($callback)
+    {
+        $this->callback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Render action for row
+     *
+     * @param \APY\DataGridBundle\Grid\Row $row
+     * @return null|RowAction
+     */
+    public function render($row)
+    {
+        if (is_callable($this->callback)) {
+            return call_user_func($this->callback, $this, $row);
+        }
+        
+        return $this;
     }
 }
