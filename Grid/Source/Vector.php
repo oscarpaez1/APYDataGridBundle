@@ -94,6 +94,10 @@ class Vector extends Source
             $fieldTypes = array();
 
             foreach ($this->data as $row) {
+                if (!isset($row[$c->getId()])) {
+                    continue;
+                }
+
                 $fieldValue = $row[$c->getId()];
 
                 if ($fieldValue !== '' && $fieldValue !== null) {

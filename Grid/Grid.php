@@ -1038,7 +1038,7 @@ class Grid
                 $value = array('from' => $ColumnValue);
             }
 
-            if (is_bool($value['from'])) {
+            if (isset($value['from']) && is_bool($value['from'])) {
                 $value['from'] = $value['from'] ? '1' : '0';
             }
 
@@ -1336,9 +1336,8 @@ class Grid
      */
     public function isPagerSectionVisible()
     {
-        $limits = sizeof($this->getLimits());
-
-        return $limits > 1 || ($limits <= 1 && $this->getLimit() < $this->totalCount);
+        // true when totalCount rows exceed the minimum pager limit
+        return (min($this->getLimits()) <= $this->totalCount);
     }
 
     /**
